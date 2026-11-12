@@ -1,0 +1,150 @@
+#!/usr/bin/env python3
+import os
+from pathlib import Path
+
+# ── Try loading .env file ────────────────────────────────────────────────
+_PROJECT_ROOT = Path(__file__).resolve().parent
+_ENV_FILE = _PROJECT_ROOT / ".env"
+
+try:
+    from dotenv import load_dotenv
+    if _ENV_FILE.exists():
+        load_dotenv(_ENV_FILE, override=False)
+        print(f"[CONFIG] Loaded .env from {_ENV_FILE}")
+    else:
+        print(f"[CONFIG] No .env found at {_ENV_FILE} — using env vars / defaults")
+except ImportError:
+    print("[CONFIG] python-dotenv not installed — using env vars / defaults only")
+    print("[CONFIG] Install with: pip install python-dotenv")
+
+
+# ── Helpers ──────────────────────────────────────────────────────────────
+def _str(key: str, default: str = "") -> str:
+    return os.getenv(key, default)
+
+def _int(key: str, default: int = 0) -> int:
+    return int(os.getenv(key, str(default)))
+
+def _float(key: str, default: float = 0.0) -> float:
+    return float(os.getenv(key, str(default)))
+
+def _bool(key: str, default: bool = False) -> bool:
+    return os.getenv(key, str(default)).lower() in ("true", "1", "yes")
+
+
+# ═════════════════════════════════════════════════════════════════════════
+#  Configuration Namespace
+# ═════════════════════════════════════════════════════════════════════════
+class _Config:
+    """Read-only configuration object. All values resolved at import time."""
+
+    # ── Whisper ──────────────────────────────────────────────────────
+    WHISPER_MODEL_DIR: str  = _str("WHISPER_MODEL_DIR", "small.en")
+    DEVICE: str             = _str("DEVICE", "cuda")
+    COMPUTE_TYPE: str       = _str("COMPUTE_TYPE", "float16")
+
+    # ── ML Classifier ────────────────────────────────────────────────
+    CLASSIFIER_PATH: str    = _str("CLASSIFIER_PATH", "../models/text_cls_amd_v2.joblib")
+
+    # ── Server ───────────────────────────────────────────────────────
+    HOST: str               = _str("HOST", "0.0.0.0")
+    PORT: int               = _int("PORT", 8989)
+    WORKERS: int            = _int("WORKERS", 1)
+    MAX_CALL_SEC: float     = _float("MAX_CALL_SEC", 2.5)
+    DEBUG: bool             = _bool("DEBUG", False)
+
+    # ── Audio Constants ──────────────────────────────────────────────
+    ASTERISK_SR: int        = 8000
+    WHISPER_SR: int         = 16000
+    SILERO_SR: int          = 16000
+
+    # ── Silero VAD ───────────────────────────────────────────────────
+    SILERO_VAD_THRESHOLD: float  = _float("SILERO_VAD_THRESHOLD", 0.3)
+    SILERO_MIN_SPEECH_MS: int    = _int("SILERO_MIN_SPEECH_MS", 100)
+    SILERO_VAD_DIR: str          = _str("SILERO_VAD_DIR", "")
+
+    # ── Audio Processing ─────────────────────────────────────────────
+    SILENCE_RMS_THRESHOLD: float = _float("SILENCE_RMS_THRESHOLD", 0.003)
+    TARGET_RMS: float            = _float("TARGET_RMS", 0.08)
+    MAX_GAIN: float              = _float("MAX_GAIN", 2.5)
+    SOXR_QUALITY: str            = _str("SOXR_QUALITY", "HQ")
+
+    # ── Whisper Prompt ───────────────────────────────────────────────
+    INITIAL_PROMPT: str = _str(
+        "INITIAL_PROMPT",
+        "voicemail, message, beep, tone, press, mailbox, answering machine, automated attendant"
+    )
+
+    # ── Hallucination Prevention ─────────────────────────────────────
+    MIN_SPEECH_RATIO: float       = _float("MIN_SPEECH_RATIO", 0.15)
+    MIN_CONFIDENCE_GREETING: float = _float("MIN_CONFIDENCE_GREETING", 0.50)
+    MIN_SPEECH_MS_HUMAN: int      = _int("MIN_SPEECH_MS_HUMAN", 700)
+    MIN_P2A_RATIO: float          = _float("MIN_P2A_RATIO", 3.5)
+    NOISE_P2A_THRESHOLD: float    = _float("NOISE_P2A_THRESHOLD", 3.2)
+    SHORT_SPEECH_THRESHOLD: int   = _int("SHORT_SPEECH_THRESHOLD", 500)
+    LOW_CONF_THRESHOLD: float     = _float("LOW_CONF_THRESHOLD", 0.52)
+
+    # ── Elasticsearch ────────────────────────────────────────────────
+    ELASTIC_ENABLED: bool         = _bool("ELASTIC_ENABLED", True)
+    ELASTICSEARCH_URL: str        = _str("ELASTICSEARCH_URL", "http://es.softotele.com:80")
+    ELASTIC_API_KEY: str          = _str("ELASTIC_API_KEY", "NjFELUJwMEJyWmNsVjhTRmZZWDg6Y0RPZkwyZmNUcDI5aE93bS1BZFdtUQ==")
+    ELASTIC_INDEX_PREFIX: str     = _str("ELASTIC_INDEX_PREFIX", "amd-stats")
+    ELASTIC_BULK_SIZE: int        = _int("ELASTIC_BULK_SIZE", 50)
+    ELASTIC_FLUSH_INTERVAL: float = _float("ELASTIC_FLUSH_INTERVAL", 5.0)
+    ELASTIC_MAX_QUEUE: int        = _int("ELASTIC_MAX_QUEUE", 10000)
+    ELASTIC_DEBUG: bool           = _bool("ELASTIC_DEBUG", False)
+
+    # ── Audio Storage (SFTP) ─────────────────────────────────────────
+    AUDIO_SAVE_ENABLED: bool = _bool("AUDIO_SAVE_ENABLED", True)
+    AUDIO_FORMAT: str        = _str("AUDIO_FORMAT", "mp3")
+    AUDIO_SAVE_FILTER: str   = _str("AUDIO_SAVE_FILTER", "all")
+
+    STORAGE_SERVER: str      = _str("STORAGE_SERVER", "u563163.your-storagebox.de")
+    STORAGE_PORT: int        = _int("STORAGE_PORT", 23)
+    STORAGE_USER: str        = _str("STORAGE_USER", "u563163")
+    STORAGE_PASSWORD: str    = _str("STORAGE_PASSWORD", "AMD$server!1122@ARC")
+    STORAGE_PATH: str        = _str("STORAGE_PATH", "/home/audio_storage")
+
+    MP3_BITRATE: str         = _str("MP3_BITRATE", "64k")
+    AUDIO_QUEUE_SIZE: int    = _int("AUDIO_QUEUE_SIZE", 1000)
+    AUDIO_MAX_RETRIES: int   = _int("AUDIO_MAX_RETRIES", 3)
+    AUDIO_RETRY_DELAY: float = _float("AUDIO_RETRY_DELAY", 2.0)
+    AUDIO_CONN_TIMEOUT: int  = _int("AUDIO_CONN_TIMEOUT", 15)
+    AUDIO_KEEPALIVE: int     = _int("AUDIO_KEEPALIVE", 30)
+    AUDIO_DEBUG: bool        = _bool("AUDIO_DEBUG", False)
+
+    # ── Audio URL (Kibana playback) ──────────────────────────────────
+    AUDIO_URL_USER: str      = _str("AUDIO_URL_USER", "u563163")
+    AUDIO_URL_PASSWORD: str  = _str("AUDIO_URL_PASSWORD", "AMD$server!1122@ARC")
+    AUDIO_URL_HOST: str      = _str("AUDIO_URL_HOST", "u563163.your-storagebox.de")
+    AUDIO_URL_BASE_DIR: str  = _str("AUDIO_URL_BASE_DIR", "audio_storage")
+
+    def print_summary(self):
+        """Print config summary (safe — no passwords)."""
+        print("=" * 65)
+        print("  AMD Server Configuration")
+        print("=" * 65)
+        print(f"  Whisper Model  : {self.WHISPER_MODEL_DIR}")
+        print(f"  Device         : {self.DEVICE} ({self.COMPUTE_TYPE})")
+        print(f"  Classifier     : {self.CLASSIFIER_PATH}")
+        print(f"  Server         : {self.HOST}:{self.PORT}")
+        print(f"  MAX_CALL_SEC   : {self.MAX_CALL_SEC}s")
+        print(f"  Elasticsearch  : {'ENABLED' if self.ELASTIC_ENABLED else 'DISABLED'}")
+        print(f"    URL          : {self.ELASTICSEARCH_URL}")
+        print(f"    Index        : {self.ELASTIC_INDEX_PREFIX}-YYYY.MM.DD")
+        print(f"  Audio Storage  : {'ENABLED' if self.AUDIO_SAVE_ENABLED else 'DISABLED'}")
+        print(f"    Format       : {self.AUDIO_FORMAT.upper()}")
+        print(f"    Filter       : {self.AUDIO_SAVE_FILTER}")
+        print(f"    Server       : {self.STORAGE_USER}@{self.STORAGE_SERVER}:{self.STORAGE_PORT}")
+        print(f"    Path         : {self.STORAGE_PATH}")
+        print(f"  VAD Threshold  : {self.SILERO_VAD_THRESHOLD}")
+        print(f"  Debug          : {self.DEBUG}")
+        print("=" * 65)
+
+
+# ── Singleton ────────────────────────────────────────────────────────────
+cfg = _Config()
+
+
+if __name__ == "__main__":
+    cfg.print_summary()
